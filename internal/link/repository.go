@@ -2,6 +2,8 @@ package link
 
 import (
 	"go/project_go/pkg/db"
+
+	"gorm.io/gorm/clause"
 )
 
 
@@ -23,5 +25,26 @@ func (repo *LinkRepository) Create(link *Link) (*Link, error){
 		return nil, result.Error
 	}
 
+	return link, nil
+}
+
+
+func (repo *LinkRepository) GetByHash(hash string) (*Link, error){
+	var link Link
+	result := repo.Database.DB.First(&link, "hash = ?", hash)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	
+	return &link, nil
+}
+
+func (repo *LinkRepository) Upload(link *Link) (*Link, error){
+	result := repo.Database.DB.Clauses(clause.Returning{}).Updates(link)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	
 	return link, nil
 }

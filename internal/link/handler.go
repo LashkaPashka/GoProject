@@ -5,6 +5,9 @@ import (
 	"go/project_go/pkg/req"
 	"go/project_go/pkg/res"
 	"net/http"
+	"strconv"
+
+	"gorm.io/gorm"
 )
 
 
@@ -27,25 +30,60 @@ func NetLinkHandler(router *http.ServeMux, deps LinkHandler){
 
 func (handler *LinkHandler) Create() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[LinkRequest](&w, r)
+		body, err := req.HandleBody[CreateLinkRequest](&w, r)
 		if err != nil {
 			return
 		}
-		url := Newlink(body.Url)
-		
-		resp, err := handler.LinkRepository.Create(url)
+		link := Newlink(body.Url)
+
+		for {
+			existing_hash, _ := handler.LinkRepository.GetByHash(link.Hash)
+			if existing_hash == nil {
+				break
+			}
+
+			link.GenerateHash()
+		}
+
+		resp, err := handler.LinkRepository.Create(link)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		res.EncodeJson(w, resp, 200)
+		res.EncodeJson(w, resp, 201)
 	}
 }
 
 func (handler *LinkHandler) Update() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Hello, I'm Update")
+		body, err := req.HandleBody[UploadLinkRequest](&w, r)
+		if err != nil {
+			return
+		}
+
+		idString := r.PathValue("id")
+		id, err := strconv.ParseUint(idString, 10, 32)
+		
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		
+		link, err := handler.LinkRepository.Upload(&Link{
+			Model: gorm.Model{
+				ID: uint(id),
+			},
+			Url: body.Url,
+			Hash: body.Hash,
+		})
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res.EncodeJson(w, link, 201)
 	}
 }
 
@@ -57,6 +95,13 @@ func (handler *LinkHandler) Delete() http.HandlerFunc{
 
 func (handler *LinkHandler) GoTo() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Hello, I'm GoTo")
+		hash := r.PathValue("hash")
+
+		link, err := handler.LinkRepository.GetByHash(hash)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		}
+
+		http.Redirect(w, r, link.Url, 200)
 	}
 }
