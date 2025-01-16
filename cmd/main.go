@@ -11,16 +11,19 @@ import (
 
 func main(){
 	conf := configs.LoadConfig()
-	_ = db.NewDb(conf)
+	db := db.NewDb(conf)
 	router := http.NewServeMux()
+
+	// Respositories
+	LinkRepository := link.NewLinkRepository(db)
 
 	// Handler 
 	auth.NewAuthHandler(router, auth.AuthHandlerDeps{
 		Config: conf,
 	})
 
-	link.NetLinkHandler(router, link.LinkHandlerDeps{
-		Config: conf,
+	link.NetLinkHandler(router, link.LinkHandler{
+		LinkRepository: LinkRepository,
 	})
 	
 	server := http.Server{

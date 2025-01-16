@@ -2,35 +2,44 @@ package link
 
 import (
 	"fmt"
-	"go/project_go/configs"
+	"go/project_go/pkg/req"
+	"go/project_go/pkg/res"
 	"net/http"
-
 )
 
-type LinkHandlerDeps struct{
-	*configs.Config
-}
 
 type LinkHandler struct{
-	*configs.Config
+	LinkRepository *LinkRepository
 }
 
 
 
-func NetLinkHandler(router *http.ServeMux, deps LinkHandlerDeps){
+func NetLinkHandler(router *http.ServeMux, deps LinkHandler){
 	handler := &LinkHandler{
-		Config: deps.Config,
+		LinkRepository: deps.LinkRepository,
 	}
 
 	router.HandleFunc("POST /link", handler.Create())
-	router.HandleFunc("POST /link/{id}", handler.Update())
+	router.HandleFunc("PATCH /link/{id}", handler.Update())
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
-	router.HandleFunc("GET /{alias}", handler.GoTo())
+	router.HandleFunc("GET /{hash}", handler.GoTo())
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Hello, I'm Create")
+		body, err := req.HandleBody[LinkRequest](&w, r)
+		if err != nil {
+			return
+		}
+		url := Newlink(body.Url)
+		
+		resp, err := handler.LinkRepository.Create(url)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res.EncodeJson(w, resp, 200)
 	}
 }
 
