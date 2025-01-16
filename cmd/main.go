@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/project_go/configs"
 	"go/project_go/internal/auth"
+	"go/project_go/internal/link"
 	"go/project_go/pkg/db"
 	"net/http"
 )
@@ -13,7 +14,12 @@ func main(){
 	_ = db.NewDb(conf)
 	router := http.NewServeMux()
 
+	// Handler 
 	auth.NewAuthHandler(router, auth.AuthHandlerDeps{
+		Config: conf,
+	})
+
+	link.NetLinkHandler(router, link.LinkHandlerDeps{
 		Config: conf,
 	})
 	
