@@ -7,7 +7,6 @@ type Wrapper struct {
 	statusCode int
 }
 
-
 func (w *Wrapper) WriteHeader(statusCode int){
 	w.ResponseWriter.WriteHeader(statusCode)
 	w.statusCode = statusCode
