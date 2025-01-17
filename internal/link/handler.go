@@ -1,7 +1,6 @@
 package link
 
 import (
-	"fmt"
 	"go/project_go/pkg/req"
 	"go/project_go/pkg/res"
 	"net/http"
@@ -70,6 +69,12 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 			return
 		}
 		
+		_, err = handler.LinkRepository.GetById(uint(id))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
 		link, err := handler.LinkRepository.Upload(&Link{
 			Model: gorm.Model{
 				ID: uint(id),
@@ -89,7 +94,27 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 
 func (handler *LinkHandler) Delete() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Hello, I'm Delete")
+		idString := r.PathValue("id")
+		id, err := strconv.ParseUint(idString, 10, 32)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		_, err = handler.LinkRepository.GetById(uint(id))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		err = handler.LinkRepository.Delete(uint(id))
+		
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		res.EncodeJson(w, nil, 200)
 	}
 }
 
@@ -100,6 +125,7 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc{
 		link, err := handler.LinkRepository.GetByHash(hash)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
+			return
 		}
 
 		http.Redirect(w, r, link.Url, 200)
