@@ -1,6 +1,9 @@
 package link
 
 import (
+	"fmt"
+	"go/project_go/configs"
+	"go/project_go/pkg/middleware"
 	"go/project_go/pkg/req"
 	"go/project_go/pkg/res"
 	"net/http"
@@ -9,20 +12,23 @@ import (
 	"gorm.io/gorm"
 )
 
+type LinkHandlerDeps struct {
+	LinkRepository *LinkRepository
+	Config *configs.Config
+}
 
 type LinkHandler struct{
 	LinkRepository *LinkRepository
 }
 
 
-
-func NetLinkHandler(router *http.ServeMux, deps LinkHandler){
+func NetLinkHandler(router *http.ServeMux, deps LinkHandlerDeps){
 	handler := &LinkHandler{
 		LinkRepository: deps.LinkRepository,
 	}
 
 	router.HandleFunc("POST /link", handler.Create())
-	router.HandleFunc("PATCH /link/{id}", handler.Update())
+	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), deps.Config))
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
 	router.HandleFunc("GET /{hash}", handler.GoTo())
 }
@@ -56,6 +62,10 @@ func (handler *LinkHandler) Create() http.HandlerFunc{
 
 func (handler *LinkHandler) Update() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
+		if email, ok := r.Context().Value(middleware.Emailkey).(string); ok {
+			fmt.Println(email)
+		}
+		
 		body, err := req.HandleBody[UploadLinkRequest](&w, r)
 		if err != nil {
 			return

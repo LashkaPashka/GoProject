@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"go/project_go/configs"
 	"go/project_go/internal/auth"
@@ -10,39 +9,10 @@ import (
 	"go/project_go/pkg/db"
 	"go/project_go/pkg/middleware"
 	"net/http"
-	"time"
 )
-
-func Ticker(ctx context.Context){
-	tick := time.NewTicker(1000*time.Millisecond)
-	
-	for {
-		select{
-			case <-tick.C:
-				fmt.Println("Tick")
-			case <-ctx.Done():
-				fmt.Println("Cancel")	
-				return
-		}
-
-	}
-
-}
 
 
 func main(){
-	ctx, cancel := context.WithCancel(context.Background())
-	go Ticker(ctx)
-
-	time.Sleep(10*time.Second)
-	cancel()
-	time.Sleep(2*time.Second)
-
-}
-
-
-
-func main1(){
 	conf := configs.LoadConfig()
 	db := db.NewDb(conf)
 	router := http.NewServeMux()
@@ -59,8 +29,9 @@ func main1(){
 		AuthService: authService,
 	})
 
-	link.NetLinkHandler(router, link.LinkHandler{
+	link.NetLinkHandler(router, link.LinkHandlerDeps{
 		LinkRepository: LinkRepository,
+		Config: conf,
 	})
 	
 
