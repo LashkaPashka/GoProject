@@ -10,27 +10,20 @@ import (
 	"go/project_go/pkg/db"
 	"go/project_go/pkg/middleware"
 	"net/http"
-	"time"
 )
 
 func main(){
-	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
-	defer cancel()
+	type key int
 
-	tick := make(chan struct{})
+	const EmailKey key = 20
 	
-	go func () {
-		time.Sleep(4*time.Second)
-		close(tick)
-	}()
+	ctx := context.WithValue(context.Background(), EmailKey, "a@a.ru")
 
-
-	select{
-		case <- tick:			
-			fmt.Println("Channel")
-		case <-ctx.Done():
-			fmt.Println("TimeOut") 
-		}
+	if value, ok := ctx.Value(EmailKey).(string); ok {
+		fmt.Println(value)
+	} else {
+		fmt.Println("No value")
+	}
 }
 
 
