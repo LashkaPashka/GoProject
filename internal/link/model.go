@@ -5,6 +5,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type LinkAll struct{
+	Link []Link `json:"links"`
+	Count int64 `json:"count"`
+}
+
 type Link struct {
 	gorm.Model
 	Url string `json:"url"`

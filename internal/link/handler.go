@@ -31,6 +31,7 @@ func NetLinkHandler(router *http.ServeMux, deps LinkHandlerDeps){
 	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), deps.Config))
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
 	router.HandleFunc("GET /{hash}", handler.GoTo())
+	router.Handle("GET /links", middleware.IsAuthed(handler.GetAll(), deps.Config))
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc{
@@ -73,7 +74,7 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 
 		idString := r.PathValue("id")
 		id, err := strconv.ParseUint(idString, 10, 32)
-		
+		  
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -139,5 +140,27 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc{
 		}
 
 		http.Redirect(w, r, link.Url, 200)
+	}
+}
+
+func (handler *LinkHandler) GetAll() http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+		if err != nil {
+			return
+		}
+
+		offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+		if err != nil {
+			return
+		}
+		
+		links := handler.LinkRepository.GetAll(limit, offset)
+		count := handler.LinkRepository.Count()
+
+		res.EncodeJson(w, LinksResponse{
+			Links: links,
+			Count: count,
+		}, http.StatusOK)
 	}
 }
