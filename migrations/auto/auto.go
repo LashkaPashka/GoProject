@@ -2,6 +2,7 @@ package main
 
 import (
 	"go/project_go/internal/link"
+	"go/project_go/internal/stats"
 	"go/project_go/internal/user"
 	"os"
 
@@ -21,5 +22,5 @@ func main(){
 		panic(err)
 	}
 	
-	db.AutoMigrate(&link.Link{}, &user.User{})
+	db.AutoMigrate(&link.Link{}, &user.User{}, &stats.Stat{})
 }

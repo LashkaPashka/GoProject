@@ -3,6 +3,7 @@ package link
 import (
 	"fmt"
 	"go/project_go/configs"
+	"go/project_go/pkg/event"
 	"go/project_go/pkg/middleware"
 	"go/project_go/pkg/req"
 	"go/project_go/pkg/res"
@@ -14,27 +15,31 @@ import (
 
 type LinkHandlerDeps struct {
 	LinkRepository *LinkRepository
-	Config *configs.Config
+	Config         *configs.Config
+	EventBus 	   *event.EventBus
 }
 
-type LinkHandler struct{
+type LinkHandler struct {
 	LinkRepository *LinkRepository
+	Config         *configs.Config
+	EventBus 	   *event.EventBus
 }
 
-
-func NetLinkHandler(router *http.ServeMux, deps LinkHandlerDeps){
+func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
 	handler := &LinkHandler{
 		LinkRepository: deps.LinkRepository,
+		Config: deps.Config,
+		EventBus: deps.EventBus,
 	}
 
 	router.HandleFunc("POST /link", handler.Create())
-	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), deps.Config))
+	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), handler.Config))
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
 	router.HandleFunc("GET /{hash}", handler.GoTo())
-	router.Handle("GET /links", middleware.IsAuthed(handler.GetAll(), deps.Config))
+	router.Handle("GET /links", middleware.IsAuthed(handler.GetAll(), handler.Config))
 }
 
-func (handler *LinkHandler) Create() http.HandlerFunc{
+func (handler *LinkHandler) Create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[CreateLinkRequest](&w, r)
 		if err != nil {
@@ -61,12 +66,12 @@ func (handler *LinkHandler) Create() http.HandlerFunc{
 	}
 }
 
-func (handler *LinkHandler) Update() http.HandlerFunc{
+func (handler *LinkHandler) Update() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if email, ok := r.Context().Value(middleware.Emailkey).(string); ok {
 			fmt.Println(email)
 		}
-		
+
 		body, err := req.HandleBody[UploadLinkRequest](&w, r)
 		if err != nil {
 			return
@@ -74,12 +79,12 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 
 		idString := r.PathValue("id")
 		id, err := strconv.ParseUint(idString, 10, 32)
-		  
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		_, err = handler.LinkRepository.GetById(uint(id))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -90,7 +95,7 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 			Model: gorm.Model{
 				ID: uint(id),
 			},
-			Url: body.Url,
+			Url:  body.Url,
 			Hash: body.Hash,
 		})
 
@@ -103,7 +108,7 @@ func (handler *LinkHandler) Update() http.HandlerFunc{
 	}
 }
 
-func (handler *LinkHandler) Delete() http.HandlerFunc{
+func (handler *LinkHandler) Delete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idString := r.PathValue("id")
 		id, err := strconv.ParseUint(idString, 10, 32)
@@ -119,7 +124,7 @@ func (handler *LinkHandler) Delete() http.HandlerFunc{
 		}
 
 		err = handler.LinkRepository.Delete(uint(id))
-		
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -129,7 +134,7 @@ func (handler *LinkHandler) Delete() http.HandlerFunc{
 	}
 }
 
-func (handler *LinkHandler) GoTo() http.HandlerFunc{
+func (handler *LinkHandler) GoTo() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hash := r.PathValue("hash")
 
@@ -139,11 +144,16 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc{
 			return
 		}
 
+		go handler.EventBus.Publish(event.Event{
+			Type: event.EventLinkVisited,
+			Data: link.ID,
+		})
+
 		http.Redirect(w, r, link.Url, 200)
 	}
 }
 
-func (handler *LinkHandler) GetAll() http.HandlerFunc{
+func (handler *LinkHandler) GetAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 		if err != nil {
@@ -154,7 +164,7 @@ func (handler *LinkHandler) GetAll() http.HandlerFunc{
 		if err != nil {
 			return
 		}
-		
+
 		links := handler.LinkRepository.GetAll(limit, offset)
 		count := handler.LinkRepository.Count()
 

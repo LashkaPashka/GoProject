@@ -52,6 +52,5 @@ func (service *AuthService) Register(email, password, name string) (string, erro
 		return "", err
 	}
 
-
 	return user.Email, nil
 }
