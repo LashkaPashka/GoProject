@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"fmt"
 	"go/project_go/pkg/event"
 	"log"
 )
@@ -25,15 +24,13 @@ func NewServiceStat(deps *ServiceStatDeps) *ServiceStat{
 
 func (s *ServiceStat) AddClick(){
 	for msg := range s.EventBus.Subscribe(){
-		if msg.Type == event.EventLinkVisited{
+		if msg.Type == event.EventLinkVisited {
 			id, ok := msg.Data.(uint)
 			if !ok{
 				log.Fatalln("Wrong data")
 				continue
 			}
-			fmt.Println("Hello")
 			s.StatRepository.AddClick(id)
-			fmt.Println("World!")
 		}
 	}
 }

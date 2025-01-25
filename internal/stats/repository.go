@@ -3,16 +3,17 @@ package stats
 import (
 	"go/project_go/pkg/db"
 	"time"
+
 	"gorm.io/datatypes"
 )
 
 type StatsRepository struct {
-	*db.Db
+	datebase *db.Db
 }
 
 func NewStatsRepository(db *db.Db) *StatsRepository {
 	return &StatsRepository{
-		Db: db,
+		datebase: db,
 	}
 }
 
@@ -20,16 +21,17 @@ func (repo *StatsRepository) AddClick(linkId uint) {
 	var stat Stat
 
 	currentDate := datatypes.Date(time.Now())
-	repo.Db.Find(stat, "link_id = ? and date = ?", linkId, currentDate)
-	if stat.ID == 0 {
-		repo.Db.Create(&Stat{
+	repo.datebase.DB.Table("stats").Find(&stat, "link_id = ? and date = ?", linkId, currentDate)
+	
+	if stat.Id == 0 {
+		repo.datebase.DB.Create(&Stat{
 			LinkId: linkId,
 			Clicks: 1,
 			Date:   currentDate,
 		})
 	} else {
 		stat.Clicks += 1
-		repo.Db.Save(&stat)
+		repo.datebase.DB.Save(&stat)
 	}
 }
 
@@ -39,13 +41,12 @@ func (repo *StatsRepository) GetStat(from, to time.Time, by string) []StatRespon
 
 	switch (by){
 		case GroupByDay:
-			selectByObject = "char_to(date, YYYY-MMM-DD) as period, sum(clicks)"
-
+			selectByObject = "to_char(date, YYYY-MMM-DD) AS period, SUM(clicks)"
 		case GroupByMonth:
-			selectByObject = "char_to(date, YYYY-MMM) as period, sum(clicks)"	
+			selectByObject = "to_char(date, YYYY-MMM) AS period, SUM(clicks)"	
 	}
 
-	repo.DB.Table("links").
+	repo.datebase.DB.Table("stats").
 	Select(selectByObject).
 	Where("date BETWEEN ? AND ?", from, to).
 	Group("period").
