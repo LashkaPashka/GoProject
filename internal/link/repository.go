@@ -6,18 +6,15 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-
 type LinkRepository struct{
 	Database *db.Db
 }
-
 
 func NewLinkRepository(database *db.Db) *LinkRepository{
 	return &LinkRepository{
 		Database: database,
 	}
 }
-
 
 func (repo *LinkRepository) Create(link *Link) (*Link, error){
 	result := repo.Database.DB.Table("links").Create(link)
@@ -27,7 +24,6 @@ func (repo *LinkRepository) Create(link *Link) (*Link, error){
 
 	return link, nil
 }
-
 
 func (repo *LinkRepository) GetByHash(hash string) (*Link, error){
 	var link Link
